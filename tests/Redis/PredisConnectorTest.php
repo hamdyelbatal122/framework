@@ -148,6 +148,50 @@ class PredisConnectorTest extends TestCase
         $this->assertSame(2, $formatted['retry']->getRetries());
         $this->assertInstanceOf(\Predis\Retry\Strategy\NoBackoff::class, $formatted['retry']->getStrategy());
     }
+
+    public function testFormatRetryWithObjectStrategy()
+    {
+        if (! class_exists(\Predis\Retry\Retry::class)) {
+            $this->markTestSkipped('Predis retry support is only available in Predis >= 3.4.0');
+        }
+
+        $connector = new TestablePredisConnector;
+        $strategy = new \Predis\Retry\Strategy\NoBackoff;
+
+        $config = [
+            'retry' => [
+                'retries' => 4,
+                'strategy' => $strategy,
+            ],
+        ];
+
+        $formatted = $connector->testFormatRetry($config);
+
+        $this->assertInstanceOf(\Predis\Retry\Retry::class, $formatted['retry']);
+        $this->assertSame(4, $formatted['retry']->getRetries());
+        $this->assertSame($strategy, $formatted['retry']->getStrategy());
+    }
+
+    public function testFormatRetryThrowsExceptionOnInvalidStrategy()
+    {
+        if (! class_exists(\Predis\Retry\Retry::class)) {
+            $this->markTestSkipped('Predis retry support is only available in Predis >= 3.4.0');
+        }
+
+        $connector = new TestablePredisConnector;
+
+        $config = [
+            'retry' => [
+                'retries' => 3,
+                'strategy' => 'invalid-strategy-name',
+            ],
+        ];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Strategy [invalid-strategy-name] is not a valid Predis retry strategy.');
+
+        $connector->testFormatRetry($config);
+    }
 }
 
 class TestablePredisConnector extends PredisConnector

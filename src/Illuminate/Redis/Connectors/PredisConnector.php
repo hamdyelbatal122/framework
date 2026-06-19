@@ -91,9 +91,11 @@ class PredisConnector implements Connector
                     $retry['cap'] ?? 2000000,
                     $retry['with_jitter'] ?? false
                 ),
-                default => is_string($strategy) && class_exists($strategy)
-                    ? new $strategy(...($retry['parameters'] ?? []))
-                    : $strategy,
+                default => is_object($strategy)
+                    ? $strategy
+                    : (is_string($strategy) && class_exists($strategy)
+                        ? new $strategy(...($retry['parameters'] ?? []))
+                        : throw new InvalidArgumentException("Strategy [{$strategy}] is not a valid Predis retry strategy.")),
             };
 
             $config['retry'] = new Retry($backoff, $retries);
